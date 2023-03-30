@@ -22,10 +22,10 @@ current_playlist = ""
 TOK_FILE = "token.txt"
 
 def get_token():
-  tokfile = open(TOK_FILE, 'r')
-  token = tokfile.read()
-  tokfile.close()
-  return token
+    tokfile = open(TOK_FILE, 'r')
+    token = tokfile.read()
+    tokfile.close()
+    return token
 
 #####################################
 
@@ -63,6 +63,49 @@ async def choose_folder(ctx, *, folder_path):
     current_playlist = folder_path
     await ctx.send(f"Current playlist has been set to {folder_path}")
     await ctx.send("Write the name of the song you want to hear (!choose song #songname#)")
+
+#####################################
+
+@client.command(pass_context=True)
+async def choose_song(ctx, *, song_name):
+    global current_folder
+    current_folder = current_playlist
+    playlist_files = os.listdir(current_folder)
+    file_path = ""
+    for filename in playlist_files:
+        if song_name.lower() in filename.lower():
+            file_path = os.path.join(current_folder, filename)
+            break
+    if file_path == "":
+        await ctx.send(f"Could not find {song_name} in the current playlist")
+        return
+    if not ctx.author.voice:
+        await ctx.send("You are not connected to a voice channel.")
+        return
+
+    voice_channel = ctx.author.voice.channel
+    voice_client = ctx.guild.voice_client
+
+    if voice_client and voice_client.is_playing():
+        await ctx.send("Bot is already playing audio.")
+        return
+
+    if not voice_client:
+        voice_client = await voice_channel.connect()
+
+    temp_file = "temp.wav"
+    try:
+        audio = AudioSegment.from_mp3(file_path)
+        audio.export(temp_file, format="wav")
+
+        source = FFmpegPCMAudio(temp_file)
+        voice_client.play(source)
+        await ctx.send(f"Playing {file_path}")
+    except Exception as e:
+        await ctx.send(f"An error occurred while playing the file: {str(e)}")
+        print(traceback.format_exc())
+    finally:
+        os.remove(temp_file)
 
 #####################################
 
