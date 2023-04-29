@@ -13,11 +13,13 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
 
-############## Folders ##############
+#####################################
 
 current_playlist = ""
 
-############## Main Code ##############
+queue = []
+
+############## Main Code #############
 
 TOK_FILE = "token.txt"
 
@@ -67,8 +69,8 @@ async def choose_folder(ctx, *, folder_path):
 #####################################
 
 @client.command(pass_context=True)
-async def choose_song(ctx, *, song_name):
-    global current_folder
+async def Play(ctx, *, song_name):
+    global current_folder, queue
     current_folder = current_playlist
     playlist_files = os.listdir(current_folder)
     file_path = ""
@@ -83,24 +85,54 @@ async def choose_song(ctx, *, song_name):
         await ctx.send("You are not connected to a voice channel.")
         return
 
-    voice_channel = ctx.author.voice.channel
     voice_client = ctx.guild.voice_client
 
     if voice_client and voice_client.is_playing():
         await ctx.send("Bot is already playing audio.")
+        queue.append(file_path)
         return
 
     if not voice_client:
-        voice_client = await voice_channel.connect()
+        await ctx.send("Bot is not in voice_chat")
+        return
 
     temp_file = "temp.wav"
     try:
         audio = AudioSegment.from_mp3(file_path)
         audio.export(temp_file, format="wav")
-
         source = FFmpegPCMAudio(temp_file)
-        voice_client.play(source)
+
+        def play_next(error):
+            if error:
+                print(f"An error occurred while playing the file: {str(error)}")
+            if queue:
+                next_song = queue.pop(0)
+                audio = AudioSegment.from_mp3(next_song)
+                audio.export(temp_file, format="wav")
+                source = FFmpegPCMAudio(temp_file)
+                voice_client.play(source, after=play_next)
+                ctx.send(f"Playing {next_song}")
+
+        player = voice_client.play(source, after=play_next)
         await ctx.send(f"Playing {file_path}")
+
+        while voice_client.is_playing():
+            # wait until the current audio is finished playing
+            await asyncio.sleep(1)
+
+            # check for commands
+            contents = message.content.lower()
+            if contents == ("!pause"):
+                player.pause()
+                await ctx.send("Paused the audio playback.")
+            elif contents == ("!resume"):
+                player.resume()
+                await ctx.send("Resumed the audio playback.")
+            elif contents == ("!skip"):
+                player.stop()
+                await ctx.send("Skipped the current audio playback.")
+                return
+
     except Exception as e:
         await ctx.send(f"An error occurred while playing the file: {str(e)}")
         print(traceback.format_exc())
