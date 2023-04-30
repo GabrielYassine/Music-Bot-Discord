@@ -5,6 +5,7 @@ from pydub import AudioSegment # for playing music
 import os # to remove audio file
 import eyed3 # for reviewing mp3 file info
 import traceback
+import asyncio
 
 ############## Setup ##############
 
@@ -69,7 +70,7 @@ async def choose_folder(ctx, *, folder_path):
 #####################################
 
 @client.command(pass_context=True)
-async def Play(ctx, *, song_name):
+async def Play(ctx, message, *, song_name):
     global current_folder, queue
     current_folder = current_playlist
     playlist_files = os.listdir(current_folder)
