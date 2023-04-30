@@ -5,6 +5,7 @@ from pydub import AudioSegment # for playing music
 import os # to remove audio file
 import eyed3 # for reviewing mp3 file info
 import traceback
+import asyncio
 
 ############## Setup ##############
 
@@ -41,8 +42,8 @@ async def on_ready():
 async def join(ctx):
     if (ctx.author.voice):
         channel = ctx.message.author.voice.channel
-        await ctx.send("Music Bot has joined the voice channel!")
-        await ctx.send("Write filepath of the folder (playlist) you want to play (!choose folder #folderpath#)")
+        await ctx.send("Music Bot has joined the voice channel")
+        await ctx.send("Write filepath of the folder (playlist) you want to play (!playlist #Directory#)")
         await channel.connect()
     else:
         await ctx.send("You are not currently in a voice channel.")
@@ -53,23 +54,23 @@ async def join(ctx):
 async def leave(ctx):
     if (ctx.voice_client):
         await ctx.guild.voice_client.disconnect()
-        await ctx.send("Music bot has left the voice channel!")
+        await ctx.send("Music bot has left the voice channel")
     else:
-        await ctx.send("I am not currently in a voice channel.")
+        await ctx.send("Music bot is not currently in a voice channel")
 
 #####################################
 
 @client.command(pass_context=True)
-async def choose_folder(ctx, *, folder_path):
+async def playlist(ctx, *, folder_path):
     global current_playlist
     current_playlist = folder_path
     await ctx.send(f"Current playlist has been set to {folder_path}")
-    await ctx.send("Write the name of the song you want to hear (!choose song #songname#)")
+    await ctx.send("Write the name of the song you want to hear (!play #song_name#")
 
 #####################################
 
 @client.command(pass_context=True)
-async def Play(ctx, *, song_name):
+async def play(ctx, message, *, song_name):
     global current_folder, queue
     current_folder = current_playlist
     playlist_files = os.listdir(current_folder)
@@ -88,12 +89,12 @@ async def Play(ctx, *, song_name):
     voice_client = ctx.guild.voice_client
 
     if voice_client and voice_client.is_playing():
-        await ctx.send("Bot is already playing audio.")
+        await ctx.send("Music bot is already playing audio.")
         queue.append(file_path)
         return
 
     if not voice_client:
-        await ctx.send("Bot is not in voice_chat")
+        await ctx.send("Bot is not in a voice channel")
         return
 
     temp_file = "temp.wav"
@@ -117,20 +118,18 @@ async def Play(ctx, *, song_name):
         await ctx.send(f"Playing {file_path}")
 
         while voice_client.is_playing():
-            # wait until the current audio is finished playing
             await asyncio.sleep(1)
 
-            # check for commands
             contents = message.content.lower()
             if contents == ("!pause"):
                 player.pause()
-                await ctx.send("Paused the audio playback.")
+                await ctx.send("Paused the audio")
             elif contents == ("!resume"):
                 player.resume()
-                await ctx.send("Resumed the audio playback.")
+                await ctx.send("Resumed the audio")
             elif contents == ("!skip"):
                 player.stop()
-                await ctx.send("Skipped the current audio playback.")
+                await ctx.send("Skipped the audio")
                 return
 
     except Exception as e:
