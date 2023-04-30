@@ -45,6 +45,10 @@ async def join(ctx):
         await ctx.send("Music Bot has joined the voice channel")
         await ctx.send("Write filepath of the folder (playlist) you want to play (!playlist #Directory#)")
         await channel.connect()
+        queue.clear()
+        temp_file = "temp.wav"
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
     else:
         await ctx.send("You are not currently in a voice channel.")
 
@@ -55,6 +59,10 @@ async def leave(ctx):
     if (ctx.voice_client):
         await ctx.guild.voice_client.disconnect()
         await ctx.send("Music bot has left the voice channel")
+        queue.clear()
+        temp_file = "temp.wav"
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
     else:
         await ctx.send("Music bot is not currently in a voice channel")
 
