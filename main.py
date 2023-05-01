@@ -78,7 +78,7 @@ async def playlist(ctx, *, folder_path):
 #####################################
 
 @client.command(pass_context=True)
-async def play(ctx, message, *, song_name):
+async def play(ctx, *, song_name):
     global current_folder, queue
     current_folder = current_playlist
     playlist_files = os.listdir(current_folder)
@@ -102,8 +102,7 @@ async def play(ctx, message, *, song_name):
         return
 
     if not voice_client:
-        await ctx.send("Bot is not in a voice channel")
-        return
+        await ctx.author.voice.channel.connect()
 
     temp_file = "temp.wav"
     try:
@@ -128,23 +127,33 @@ async def play(ctx, message, *, song_name):
         while voice_client.is_playing():
             await asyncio.sleep(1)
 
-            contents = message.content.lower()
-            if contents == ("!pause"):
-                player.pause()
-                await ctx.send("Paused the audio")
-            elif contents == ("!resume"):
-                player.resume()
-                await ctx.send("Resumed the audio")
-            elif contents == ("!skip"):
-                player.stop()
-                await ctx.send("Skipped the audio")
-                return
+            # Check if message variable is defined
+            if "message" not in locals():
+                message = None
+            
+            if message:
+                message = await ctx.channel.fetch_message(message.id)
+                contents = message.content.lower()
+                if contents == ("!pause"):
+                    player.pause()
+                    await ctx.send("Paused the audio")
+                elif contents == ("!resume"):
+                    player.resume()
+                    await ctx.send("Resumed the audio")
+                elif contents == ("!skip"):
+                    player.stop()
+                    await ctx.send("Skipped the audio")
+                    return
 
     except Exception as e:
         await ctx.send(f"An error occurred while playing the file: {str(e)}")
         print(traceback.format_exc())
     finally:
-        os.remove(temp_file)
+        if voice_client.is_playing():
+            return
+        else:
+            os.remove(temp_file)
+
 
 #####################################
 
