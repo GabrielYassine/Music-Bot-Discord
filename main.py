@@ -5,7 +5,6 @@ from pydub import AudioSegment # for playing music
 import os # to remove audio file
 import eyed3 # for reviewing mp3 file info
 import traceback
-import asyncio
 
 ############## Setup ##############
 
@@ -38,12 +37,18 @@ async def on_ready():
 
 #####################################
 
+@client.command(pass_context=True)
+async def help(ctx):
+    await ctx.send("!join\n!leave\n!playlist ''\n!play ''\npause\n!resume\n!skip\n$playlist_details\n$song_details")
+
+#####################################
+
 @client.command(pass_context = True)
 async def join(ctx):
     if (ctx.author.voice):
         channel = ctx.message.author.voice.channel
         await ctx.send("Music Bot has joined the voice channel")
-        await ctx.send("Write filepath of the folder (playlist) you want to play (!playlist #Directory#)")
+        await ctx.send("Write filepath of the folder (playlist) you want to play (!playlist 'Directory'")
         await channel.connect()
         queue.clear()
         temp_file = "temp.wav"
@@ -73,7 +78,7 @@ async def playlist(ctx, *, folder_path):
     global current_playlist
     current_playlist = folder_path
     await ctx.send(f"Current playlist has been set to {folder_path}")
-    await ctx.send("Write the name of the song you want to hear (!play #song_name#")
+    await ctx.send("Write the name of the song you want to hear (!play 'song_name' without '.mp3'")
 
 #####################################
 
@@ -97,7 +102,8 @@ async def play(ctx, *, song_name):
     voice_client = ctx.guild.voice_client
 
     if voice_client and voice_client.is_playing():
-        await ctx.send("Music bot is already playing audio.")
+        num_songs = len(queue)
+        await ctx.send(f"Added to queue, song is nr. {num_songs} in queue")
         queue.append(file_path)
         return
 
@@ -123,28 +129,6 @@ async def play(ctx, *, song_name):
 
         player = voice_client.play(source, after=play_next)
         await ctx.send(f"Playing {file_path}")
-
-        while voice_client.is_playing():
-            await asyncio.sleep(1)
-
-            # Check if message variable is defined
-            if "message" not in locals():
-                message = None
-            
-            if message:
-                message = await ctx.channel.fetch_message(message.id)
-                contents = message.content.lower()
-                if contents == ("!pause"):
-                    player.pause()
-                    await ctx.send("Paused the audio")
-                elif contents == ("!resume"):
-                    player.resume()
-                    await ctx.send("Resumed the audio")
-                elif contents == ("!skip"):
-                    player.stop()
-                    await ctx.send("Skipped the audio")
-                    return
-
     except Exception as e:
         await ctx.send(f"An error occurred while playing the file: {str(e)}")
         print(traceback.format_exc())
@@ -154,6 +138,50 @@ async def play(ctx, *, song_name):
         else:
             os.remove(temp_file)
 
+#####################################
+
+@client.command(pass_context=True)
+async def pause(ctx):
+    voice_client = ctx.guild.voice_client
+    if not voice_client:
+        await ctx.send("Music bot is not currently in a voice channel")
+        return
+    
+    if voice_client.is_playing():
+        voice_client.pause()
+        await ctx.send("Paused the audio.")
+    else:
+        await ctx.send("No song is playing currently")
+
+#####################################
+
+@client.command(pass_context=True)
+async def resume(ctx):
+    voice_client = ctx.guild.voice_client
+    if not voice_client:
+        await ctx.send("Music bot is not currently in a voice channel")
+        return
+    
+    if voice_client.is_playing():
+        voice_client.resume()
+        await ctx.send("Resumed the audio.")
+    else:
+        await ctx.send("No song is playing currently")
+
+#####################################
+
+@client.command(pass_context=True)
+async def skip(ctx):
+    voice_client = ctx.guild.voice_client
+    if not voice_client:
+        await ctx.send("Music bot is not currently in a voice channel")
+        return
+    
+    if voice_client.is_playing():
+        voice_client.stop()
+        await ctx.send("Skipped the audio.")
+    else:
+        await ctx.send("No song is playing currently")
 
 #####################################
 
@@ -164,7 +192,7 @@ async def on_message(message):
 
 #####################################
 
-    if message.content.lower() == ("!playlist_details"):
+    if message.content.lower() == ("$playlist_details"):
         if current_playlist:
             playlist_files = os.listdir(current_playlist)
             songs = []
@@ -180,7 +208,7 @@ async def on_message(message):
 
 #####################################
 
-    if message.content.lower() == ("!song_details"):
+    if message.content.lower() == ("$song_details"):
         voice_client = message.guild.voice_client
         if voice_client and voice_client.is_playing():
             player = voice_client.source
