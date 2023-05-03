@@ -38,7 +38,7 @@ async def on_ready():
 #####################################
 
 @client.command(pass_context=True)
-async def help(ctx):
+async def info(ctx):
     await ctx.send("!join\n!leave\n!playlist ''\n!play ''\npause\n!resume\n!skip\n$playlist_details\n$song_details")
 
 #####################################
@@ -75,11 +75,20 @@ async def leave(ctx):
 
 @client.command(pass_context=True)
 async def playlist(ctx, *, folder_path):
-    global current_playlist
+    global current_playlist, num_songs, playlist_name, songs_str
     current_playlist = folder_path
     await ctx.send(f"Current playlist has been set to {folder_path}")
     await ctx.send("Write the name of the song you want to hear (!play 'song_name' without '.mp3'")
-
+    if current_playlist:
+        playlist_files = os.listdir(current_playlist)
+        songs = []
+        for filename in playlist_files:
+            if filename.endswith(".mp3"):
+                songs.append(filename)
+        num_songs = len(songs)
+        playlist_name = os.path.basename(current_playlist)
+        songs_str = "\n".join(songs)
+        await ctx.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
 #####################################
 
 @client.command(pass_context=True)
@@ -193,18 +202,9 @@ async def on_message(message):
 #####################################
 
     if message.content.lower() == ("$playlist_details"):
-        if current_playlist:
-            playlist_files = os.listdir(current_playlist)
-            songs = []
-            for filename in playlist_files:
-                if filename.endswith(".mp3"):
-                    songs.append(filename)
-            num_songs = len(songs)
-            playlist_name = os.path.basename(current_playlist)
-            songs_str = "\n".join(songs)
-            await message.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
-        else:
-            await message.channel.send("No playlist selected.")
+        await message.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
+    else:
+        await message.channel.send("No playlist selected.")
 
 #####################################
 
