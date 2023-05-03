@@ -202,9 +202,10 @@ async def on_message(message):
 #####################################
 
     if message.content.lower() == ("$playlist_details"):
-        await message.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
-    else:
-        await message.channel.send("No playlist selected.")
+        if current_playlist != "":
+            await message.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
+        else:
+            await message.channel.send("No playlist selected.")
 
 #####################################
 
