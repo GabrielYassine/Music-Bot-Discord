@@ -39,7 +39,7 @@ async def on_ready():
 
 @client.command(pass_context=True)
 async def info(ctx):
-    await ctx.send("```!info - Shows list of commands (This message)\n!join - Connects bot to voice-channel.\n!leave - Disconnects bot from voice-channel.\n!playlist "" - Chooses playlist from PC.\n!play "" - Plays song from current playlist.\n!pause - pauses audio.\n!resume - resumes audio.\n!skip - skips audio.\n!queue - shows the songs in the queue.\n!remove "" - Removes specified song from queue.\n$playlist_details - Shows details about the current playlist.\n$song_details - Shows details about the current song.```")
+    await ctx.send("```!info - Shows list of commands (This message)\n!join - Connects bot to voice-channel.\n!leave - Disconnects bot from voice-channel.\n!playlist (Playlist directory) - Chooses playlist from PC.\n!play (Name of song) - Plays song from current playlist.\n!pause - pauses audio.\n!resume - resumes audio.\n!skip - skips audio.\n!queue - shows the songs in the queue.\n!remove "" - Removes specified song from queue.\n$pd - Shows details about the current playlist.\n$sd - Shows details about the current song.```")
 
 #####################################
 
@@ -100,7 +100,7 @@ async def play(ctx, *, song_name):
         await ctx.send(f"```Could not find {song_name} in the current playlist```")
         return
     if not ctx.author.voice:
-        await ctx.send("```You are not connected to a voice channel.```")
+        await ctx.send("```You are not connected to a voicechannel.```")
         return
 
     voice_client = ctx.guild.voice_client
@@ -111,7 +111,8 @@ async def play(ctx, *, song_name):
         return
 
     if not voice_client:
-        await ctx.author.voice.channel.connect()
+        await ctx.send("```Music bot is not in voicechannel yet```")
+        return
 
     try:
         source = FFmpegOpusAudio(file_path)
@@ -205,7 +206,7 @@ async def on_message(message):
 
 #####################################
 
-    if message.content.lower() == ("$playlist_details"):
+    if message.content.lower() == ("$pd"):
         if current_playlist != "":
             await message.channel.send(f"```Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}```")
         else:
@@ -214,9 +215,9 @@ async def on_message(message):
 #####################################
 
 
-    if message.content.lower() == ("$song_details"):
+    if message.content.lower() == ("$sd"):
         voice_client = message.guild.voice_client
-        if voice_client and voice_client.is_playing() or voice_client.is_paused():
+        if voice_client and (voice_client.is_playing() or voice_client.is_paused()):
             audio = MP3(current_song)
             title = audio["TIT2"].text[0] if "TIT2" in audio else ""
             artist = audio["TPE1"].text[0] if "TPE1" in audio else ""
@@ -228,7 +229,7 @@ async def on_message(message):
             await message.channel.send(f"```Title: {title}\nArtist: {artist}\nAlbum: {album}\nDuration: {duration_str}```")
         else:
             await message.channel.send("```No song is currently playing.```")
-            
+
 #####################################
 
 token = get_token()
