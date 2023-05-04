@@ -1,10 +1,10 @@
 import discord # default library needed
 from discord.ext import commands # for join and leave
-from discord import FFmpegPCMAudio # for playing music
+from discord import FFmpegOpusAudio # for playing music
 from pydub import AudioSegment # for playing music
 import os # to remove audio file
-import eyed3 # for reviewing mp3 file info
-import traceback
+from mutagen.mp3 import MP3 # for reviewing mp3 file info
+import traceback # error handle
 
 ############## Setup ##############
 
@@ -17,7 +17,7 @@ client = commands.Bot(command_prefix='!', intents=intents)
 
 current_playlist = ""
 
-queue = []
+current_song = ""
 
 ############## Main Code #############
 
@@ -39,23 +39,21 @@ async def on_ready():
 
 @client.command(pass_context=True)
 async def info(ctx):
-    await ctx.send("!join\n!leave\n!playlist ''\n!play ''\npause\n!resume\n!skip\n$playlist_details\n$song_details")
+    await ctx.send("```!info - Shows list of commands (This message)\n!join - Connects bot to voice-channel.\n!leave - Disconnects bot from voice-channel.\n!playlist "" - Chooses playlist from PC.\n!play "" - Plays song from current playlist.\n!pause - pauses audio.\n!resume - resumes audio.\n!skip - skips audio.\n!queue - shows the songs in the queue.\n!remove "" - Removes specified song from queue.\n$playlist_details - Shows details about the current playlist.\n$song_details - Shows details about the current song.```")
 
 #####################################
 
-@client.command(pass_context = True)
+@client.command(pass_context=True)
 async def join(ctx):
+    global song_queue
     if (ctx.author.voice):
         channel = ctx.message.author.voice.channel
-        await ctx.send("Music Bot has joined the voice channel")
-        await ctx.send("Write filepath of the folder (playlist) you want to play (!playlist 'Directory'")
+        await ctx.send("```Music Bot has joined the voice channel\nWrite filepath of the folder (playlist) you want to play (!playlist 'Directory')```")
         await channel.connect()
-        queue.clear()
-        temp_file = "temp.wav"
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        await ctx.invoke(client.get_command('info'))
+        song_queue = []
     else:
-        await ctx.send("You are not currently in a voice channel.")
+        await ctx.send("```You are not currently in a voice channel.```")
 
 #####################################
 
@@ -63,13 +61,10 @@ async def join(ctx):
 async def leave(ctx):
     if (ctx.voice_client):
         await ctx.guild.voice_client.disconnect()
-        await ctx.send("Music bot has left the voice channel")
-        queue.clear()
-        temp_file = "temp.wav"
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        await ctx.send("```Music bot has left the voice channel```")
+        queue = []
     else:
-        await ctx.send("Music bot is not currently in a voice channel")
+        await ctx.send("```Music bot is not currently in a voice channel```")
 
 #####################################
 
@@ -86,13 +81,14 @@ async def playlist(ctx, *, folder_path):
         num_songs = len(songs)
         playlist_name = os.path.basename(current_playlist)
         songs_str = "\n".join(songs)
-        await ctx.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
-        await ctx.send("Write the name of the song you want to hear (!play 'song_name' without '.mp3'")
+        await ctx.channel.send(f"```Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}```")
+        await ctx.send("```Write the name of the song you want to hear (!play 'song_name' without '.mp3'```")
+
 #####################################
 
 @client.command(pass_context=True)
 async def play(ctx, *, song_name):
-    global current_folder, queue
+    global current_folder, current_song
     current_folder = current_playlist
     playlist_files = os.listdir(current_folder)
     file_path = ""
@@ -101,50 +97,39 @@ async def play(ctx, *, song_name):
             file_path = os.path.join(current_folder, filename)
             break
     if file_path == "":
-        await ctx.send(f"Could not find {song_name} in the current playlist")
+        await ctx.send(f"```Could not find {song_name} in the current playlist```")
         return
     if not ctx.author.voice:
-        await ctx.send("You are not connected to a voice channel.")
+        await ctx.send("```You are not connected to a voice channel.```")
         return
 
     voice_client = ctx.guild.voice_client
 
     if voice_client and voice_client.is_playing():
-        num_songs = len(queue)
-        await ctx.send(f"Added to queue, song is nr. {num_songs} in queue")
-        queue.append(file_path)
+        await ctx.send(f"```{os.path.basename(file_path)} Added to queue```")
+        song_queue.append(file_path)
         return
 
     if not voice_client:
         await ctx.author.voice.channel.connect()
 
-    temp_file = "temp.wav"
     try:
-        audio = AudioSegment.from_mp3(file_path)
-        audio.export(temp_file, format="wav")
-        source = FFmpegPCMAudio(temp_file)
-
+        source = FFmpegOpusAudio(file_path)
         def play_next(error):
             if error:
-                print(f"An error occurred while playing the file: {str(error)}")
-            if queue:
-                next_song = queue.pop(0)
-                audio = AudioSegment.from_mp3(next_song)
-                audio.export(temp_file, format="wav")
-                source = FFmpegPCMAudio(temp_file)
+                print(f"```An error occurred while playing the file: {str(error)}```")
+            if song_queue:
+                next_song = song_queue.pop(0)
+                source = FFmpegOpusAudio(file_path)
                 voice_client.play(source, after=play_next)
-                ctx.send(f"Playing {next_song}")
+                ctx.send(f"```Playing {os.path.basename(next_song)}```")
 
-        player = voice_client.play(source, after=play_next)
-        await ctx.send(f"Playing {file_path}")
+        voice_client.play(source, after=play_next)
+        current_song = file_path
+        await ctx.send(f"```Playing {os.path.basename(file_path)}```")
     except Exception as e:
-        await ctx.send(f"An error occurred while playing the file: {str(e)}")
+        await ctx.send(f"```An error occurred while playing the file: {str(e)}```")
         print(traceback.format_exc())
-    finally:
-        if voice_client.is_playing():
-            return
-        else:
-            os.remove(temp_file)
 
 #####################################
 
@@ -152,14 +137,14 @@ async def play(ctx, *, song_name):
 async def pause(ctx):
     voice_client = ctx.guild.voice_client
     if not voice_client:
-        await ctx.send("Music bot is not currently in a voice channel")
+        await ctx.send("```Music bot is not currently in a voice channel```")
         return
     
     if voice_client.is_playing():
         voice_client.pause()
-        await ctx.send("Paused the audio.")
+        await ctx.send("```Paused the audio.```")
     else:
-        await ctx.send("No song is playing currently")
+        await ctx.send("```No song is playing currently```")
 
 #####################################
 
@@ -167,14 +152,14 @@ async def pause(ctx):
 async def resume(ctx):
     voice_client = ctx.guild.voice_client
     if not voice_client:
-        await ctx.send("Music bot is not currently in a voice channel")
+        await ctx.send("```Music bot is not currently in a voice channel```")
         return
     
-    if voice_client.is_playing():
+    if voice_client.is_paused():
         voice_client.resume()
-        await ctx.send("Resumed the audio.")
+        await ctx.send("```Resumed the audio.```")
     else:
-        await ctx.send("No song is playing currently")
+        await ctx.send("```Not a valid command currently```")
 
 #####################################
 
@@ -182,36 +167,34 @@ async def resume(ctx):
 async def skip(ctx):
     voice_client = ctx.guild.voice_client
     if not voice_client:
-        await ctx.send("Music bot is not currently in a voice channel")
+        await ctx.send("```Music bot is not currently in a voice channel```")
         return
     
     if voice_client.is_playing():
         voice_client.stop()
-        await ctx.send("Skipped the audio.")
+        await ctx.send("```Skipped the audio.```")
     else:
-        await ctx.send("No song is playing currently")
+        await ctx.send("```No song is playing currently```")
 
 #####################################
 
 @client.command(pass_context=True)
 async def queue(ctx):
-    if not queue:
-        await ctx.send("The queue is currently empty.")
+    if not song_queue:
+        await ctx.send("```The queue is currently empty.```")
     else:
-        queue_str = "\n".join(queue)
-        await ctx.send(f"The current queue is:\n{queue_str}")
+        queue_str = "\n".join(os.path.basename(path) for path in song_queue)
+        await ctx.send(f"```The current queue is:\n{queue_str}```")
 
 #####################################
 
 @client.command(pass_context=True)
-async def remove(ctx, song_name: str):
-    if not queue:
-        await ctx.send("The queue is currently empty.")
-    elif song_name not in queue:
-        await ctx.send(f"Song '{song_name}' is not in the queue.")
-    else:
-        queue.remove(song_name)
-        await ctx.send(f"Removed song '{song_name}' from the queue.")
+async def remove(ctx, position: int):
+    if len(song_queue) < position or position < 1:
+        await ctx.send("```Invalid position.```")
+        return
+    removed_song = song_queue.pop(position-1)
+    await ctx.send(f"```Removed {os.path.basename(removed_song)} from position {position} in the queue.```")
 
 #####################################
 
@@ -224,26 +207,28 @@ async def on_message(message):
 
     if message.content.lower() == ("$playlist_details"):
         if current_playlist != "":
-            await message.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
+            await message.channel.send(f"```Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}```")
         else:
-            await message.channel.send("No playlist selected.")
+            await message.channel.send("```No playlist selected.```")
 
 #####################################
 
+
     if message.content.lower() == ("$song_details"):
         voice_client = message.guild.voice_client
-        if voice_client and voice_client.is_playing():
-            player = voice_client.source
-            file_path = player._file.name
-            audio_file = eyed3.load(file_path)
-            title = audio_file.tag.title
-            artist = audio_file.tag.artist
-            album = audio_file.tag.album
-            duration = audio_file.info.time_secs
-            await message.channel.send(f"Title: {title}\nArtist: {artist}\nAlbum: {album}\nDuration: {duration}")
+        if voice_client and voice_client.is_playing() or voice_client.is_paused():
+            audio = MP3(current_song)
+            title = audio["TIT2"].text[0] if "TIT2" in audio else ""
+            artist = audio["TPE1"].text[0] if "TPE1" in audio else ""
+            album = audio["TALB"].text[0] if "TALB" in audio else ""
+            duration = audio.info.length
+            minutes = int(duration // 60)
+            seconds = int(duration % 60)
+            duration_str = f"{int(minutes):02d}:{int(seconds):02d}"
+            await message.channel.send(f"```Title: {title}\nArtist: {artist}\nAlbum: {album}\nDuration: {duration_str}```")
         else:
-            await message.channel.send("No song is currently playing.")
-
+            await message.channel.send("```No song is currently playing.```")
+            
 #####################################
 
 token = get_token()
