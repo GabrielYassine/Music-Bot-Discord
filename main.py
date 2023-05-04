@@ -90,29 +90,28 @@ async def playlist(ctx, *, folder_path):
 async def play(ctx, *, song_name):
     global current_song
     file_path = ""
-    if current_playlist:
-        for song in songs:
-            if song_name.lower() in song.lower():
-                file_path = os.path.join(current_playlist, song)
-                break
-        if file_path == "":
-            await ctx.send(f"```Could not find {song_name} in the current playlist```")
-            return
-        if not ctx.author.voice:
-            await ctx.send("```You are not connected to a voicechannel.```")
-            return
-
+    if not current_playlist:
+        await ctx.send("```No playlist is currently selected```")
+        return
+    
+    for song in songs:
+        if song_name.lower() in song.lower():
+            file_path = os.path.join(current_playlist, song)
+            break
+    if file_path == "":
+        await ctx.send(f"```Could not find {song_name} in the current playlist```")
+        return
+    if not ctx.author.voice:
+        await ctx.send("```You are not connected to a voicechannel.```")
+        return
     voice_client = ctx.guild.voice_client
-
     if voice_client and voice_client.is_playing():
         await ctx.send(f"```{os.path.basename(file_path)} Added to queue```")
         song_queue.append(file_path)
         return
-
     if not voice_client:
         await ctx.send("```Music bot is not in voicechannel yet```")
         return
-
     try:
         source = FFmpegOpusAudio(file_path)
         def play_next(error):
@@ -130,7 +129,7 @@ async def play(ctx, *, song_name):
     except Exception as e:
         await ctx.send(f"```An error occurred while playing the file: {str(e)}```")
         print(traceback.format_exc())
-
+        
 #####################################
 
 @client.command(pass_context=True)
