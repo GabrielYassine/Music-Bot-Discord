@@ -62,7 +62,7 @@ async def leave(ctx):
     if (ctx.voice_client):
         await ctx.guild.voice_client.disconnect()
         await ctx.send("```Music bot has left the voice channel```")
-        queue = []
+        song_queue = []
     else:
         await ctx.send("```Music bot is not currently in a voice channel```")
 
@@ -70,7 +70,7 @@ async def leave(ctx):
 
 @client.command(pass_context=True)
 async def playlist(ctx, *, folder_path):
-    global current_playlist, num_songs, playlist_name, songs_str
+    global current_playlist, num_songs, playlist_name, songs_str, songs
     current_playlist = folder_path
     if current_playlist:
         playlist_files = os.listdir(current_playlist)
@@ -88,20 +88,19 @@ async def playlist(ctx, *, folder_path):
 
 @client.command(pass_context=True)
 async def play(ctx, *, song_name):
-    global current_folder, current_song
-    current_folder = current_playlist
-    playlist_files = os.listdir(current_folder)
+    global current_song
     file_path = ""
-    for filename in playlist_files:
-        if song_name.lower() in filename.lower():
-            file_path = os.path.join(current_folder, filename)
-            break
-    if file_path == "":
-        await ctx.send(f"```Could not find {song_name} in the current playlist```")
-        return
-    if not ctx.author.voice:
-        await ctx.send("```You are not connected to a voicechannel.```")
-        return
+    if current_playlist:
+        for song in songs:
+            if song_name.lower() in song.lower():
+                file_path = os.path.join(current_playlist, song)
+                break
+        if file_path == "":
+            await ctx.send(f"```Could not find {song_name} in the current playlist```")
+            return
+        if not ctx.author.voice:
+            await ctx.send("```You are not connected to a voicechannel.```")
+            return
 
     voice_client = ctx.guild.voice_client
 
