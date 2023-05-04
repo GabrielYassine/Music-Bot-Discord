@@ -77,8 +77,6 @@ async def leave(ctx):
 async def playlist(ctx, *, folder_path):
     global current_playlist, num_songs, playlist_name, songs_str
     current_playlist = folder_path
-    await ctx.send(f"Current playlist has been set to {folder_path}")
-    await ctx.send("Write the name of the song you want to hear (!play 'song_name' without '.mp3'")
     if current_playlist:
         playlist_files = os.listdir(current_playlist)
         songs = []
@@ -89,6 +87,7 @@ async def playlist(ctx, *, folder_path):
         playlist_name = os.path.basename(current_playlist)
         songs_str = "\n".join(songs)
         await ctx.channel.send(f"Current Playlist: {playlist_name}\nNumber of songs: {num_songs}\nSongs:\n{songs_str}")
+        await ctx.send("Write the name of the song you want to hear (!play 'song_name' without '.mp3'")
 #####################################
 
 @client.command(pass_context=True)
