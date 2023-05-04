@@ -210,7 +210,6 @@ async def on_message(message):
 
 #####################################
 
-
     if message.content.lower() == ("$sd"):
         voice_client = message.guild.voice_client
         if voice_client and (voice_client.is_playing() or voice_client.is_paused()):
