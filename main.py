@@ -200,7 +200,19 @@ async def queue(ctx):
     else:
         queue_str = "\n".join(queue)
         await ctx.send(f"The current queue is:\n{queue_str}")
-        
+
+#####################################
+
+@client.command(pass_context=True)
+async def remove(ctx, song_name: str):
+    if not queue:
+        await ctx.send("The queue is currently empty.")
+    elif song_name not in queue:
+        await ctx.send(f"Song '{song_name}' is not in the queue.")
+    else:
+        queue.remove(song_name)
+        await ctx.send(f"Removed song '{song_name}' from the queue.")
+
 #####################################
 
 @client.event
