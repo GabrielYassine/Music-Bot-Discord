@@ -193,6 +193,16 @@ async def skip(ctx):
 
 #####################################
 
+@client.command(pass_context=True)
+async def queue(ctx):
+    if not queue:
+        await ctx.send("The queue is currently empty.")
+    else:
+        queue_str = "\n".join(queue)
+        await ctx.send(f"The current queue is:\n{queue_str}")
+        
+#####################################
+
 @client.event
 async def on_message(message):
     contents = message.content
