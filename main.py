@@ -93,7 +93,6 @@ async def play(ctx, *, song_name):
     if not current_playlist:
         await ctx.send("```No playlist is currently selected```")
         return
-    
     for song in songs:
         if song_name.lower() in song.lower():
             file_path = os.path.join(current_playlist, song)
@@ -122,14 +121,13 @@ async def play(ctx, *, song_name):
                 source = FFmpegOpusAudio(file_path)
                 voice_client.play(source, after=play_next)
                 ctx.send(f"```Playing {os.path.basename(next_song)}```")
-
         voice_client.play(source, after=play_next)
         current_song = file_path
         await ctx.send(f"```Playing {os.path.basename(file_path)}```")
     except Exception as e:
         await ctx.send(f"```An error occurred while playing the file: {str(e)}```")
         print(traceback.format_exc())
-        
+
 #####################################
 
 @client.command(pass_context=True)
