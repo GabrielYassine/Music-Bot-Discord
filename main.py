@@ -1,14 +1,12 @@
-import discord # default library needed
-from discord.ext import commands # for join and leave
-from discord import FFmpegOpusAudio # for playing music
-from pydub import AudioSegment # for playing music
-import os # to remove audio file
-from mutagen.mp3 import MP3 # for reviewing mp3 file info
-import traceback # error handle
+import discord # for discord.py
+from discord.ext import commands # for command handling
+from discord import FFmpegOpusAudio # for playing mp3 files
+import os # for file handling 
+from mutagen.mp3 import MP3 # for reading mp3 files
+import traceback # for error handling 
 
 ############## Setup ##############
 
-AudioSegment.converter = r"C:\ffmpeg\bin\ffmpeg.exe"
 intents = discord.Intents.default()
 intents.message_content = True
 client = commands.Bot(command_prefix='!', intents=intents)
